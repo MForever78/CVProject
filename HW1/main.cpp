@@ -80,6 +80,20 @@ Mat transit(Mat &image, double percent) {
     return ret;
 }
 
+Mat make_prologue(int width, int height) {
+    Mat prologue;
+    prologue = Mat::zeros(height, width, CV_8UC3);
+    
+    int fontFace = FONT_HERSHEY_SIMPLEX;
+    int thickness = 3;
+
+    putText(prologue, "CV Homework #1", Point(100, 100), fontFace, 2.0, Scalar::all(255), thickness);
+    putText(prologue, "Xingang Tong", Point(900, 600), fontFace, 1.0, Scalar::all(255), thickness);
+    putText(prologue, "ID", Point(900, 650), fontFace, 1.0, Scalar::all(255), thickness);
+
+    return prologue;
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) {
         std::cout << "Usage: Display <path to media directory>" << std::endl;
@@ -109,6 +123,8 @@ int main(int argc, char **argv) {
 
             std::vector<Mat> clippedImages = clipImages(images, width, height);
             
+            clippedImages.insert(clippedImages.begin(), make_prologue(width, height));
+            
             std::cout << width << "x" << height << std::endl;
 
             double fps = 24;
@@ -129,7 +145,7 @@ int main(int argc, char **argv) {
                 }
             }
 
-            appendVideo(outVideo, inputVideo);
+            //appendVideo(outVideo, inputVideo);
         } else {
             std::cout << "Not a directory!" << std::endl;
         }
