@@ -50,7 +50,7 @@ void appendVideo(VideoWriter &dist, VideoCapture &src) {
     }
 }
 
-void darken(Mat &image, int percent) {
+void darken(Mat &image, double percent) {
     int rows = image.rows;
     int cols = image.cols * 3;
     uchar *p;
@@ -58,9 +58,26 @@ void darken(Mat &image, int percent) {
     for (int i = 0; i < rows; ++i) {
         p = image.ptr<uchar>(i);
         for (int j = 0; j < cols; ++j) {
-            p[j] += (255 - p[j]) / 100 * percent;
+            p[j] -= p[j] * percent / 100;
         }
     }
+}
+
+Mat transit(Mat &image, double percent) {
+    int rows = image.rows;
+    int cols = image.cols * 3;
+    uchar *p, *pi;
+    Mat ret(image.size(), image.type());
+
+    for (int i = 0; i < rows; ++i) {
+        p = ret.ptr<uchar>(i);
+        pi = image.ptr<uchar>(i);
+        for (int j = 0; j < cols; ++j) {
+            p[j] = pi[j] * percent / 100;
+        }
+    }
+
+    return ret;
 }
 
 int main(int argc, char **argv) {
@@ -99,11 +116,15 @@ int main(int argc, char **argv) {
             VideoWriter outVideo = VideoWriter("out.avi", VideoWriter::fourcc('X', '2', '6', '4'), fps, Size(width, height));
 
             for (auto &it: clippedImages) {
+                for (int i = 0; i < 1 * fps; ++i) {
+                    Mat transition = transit(it, 100.0 / fps * i);
+                    outVideo << transition;
+                }
                 for (int i = 0; i < 2 * fps; ++i) {
                     outVideo << it;
                 }
                 for (int i = 0; i < 1 * fps; ++i) {
-                    darken(it, 100 / fps * i);
+                    darken(it, 100.0 / fps * i);
                     outVideo << it;
                 }
             }
