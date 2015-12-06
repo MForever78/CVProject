@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
                 }
             }
 
-            //appendVideo(outVideo, inputVideo);
+            appendVideo(outVideo, inputVideo);
         } else {
             std::cout << "Not a directory!" << std::endl;
         }
