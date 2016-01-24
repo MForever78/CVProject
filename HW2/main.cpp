@@ -12,7 +12,8 @@ int main(int argc, char **argv) {
     Size size = src.size();
     Mat dst(size, CV_32FC1);
 
-    char *window_name = "Harris Corner Demo";
+    String standard_window_name = "Harris Corner Demo Standard";
+    String window_name = "My Harris Corner";
 
     // Load image
     src = imread(argv[1]);
@@ -21,17 +22,20 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
-    cvtColor(src, src_gray, CV_BGR2GRAY );
+    cvtColor(src, src_gray, CV_BGR2GRAY);
     
-    /// Create window
-    namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+    // Create window
+    namedWindow(standard_window_name, CV_WINDOW_AUTOSIZE);
+    namedWindow(window_name, CV_WINDOW_AUTOSIZE);
 
-    //cornerHarris( src_gray, dst, 3, 3, 0.04, BORDER_DEFAULT );
-    //Mat dst_norm, dst_norm_scaled;
-    //normalize(dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
-    //convertScaleAbs( dst_norm, dst_norm_scaled );
-    //imshow(window_name, dst_norm_scaled);
+    // Standard output
+    cornerHarris( src_gray, dst, 3, 3, 0.04, BORDER_DEFAULT );
+    Mat dst_norm, dst_norm_scaled;
+    normalize(dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
+    convertScaleAbs( dst_norm, dst_norm_scaled );
+    imshow(standard_window_name, dst_norm_scaled);
 
+    // My own output
     Mat result = harris(src, 3, 3, 0.04);
 
     Mat result_norm, result_norm_scaled;
@@ -39,28 +43,29 @@ int main(int argc, char **argv) {
     normalize(result, result_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
     convertScaleAbs(result_norm, result_norm_scaled);
 
-  	imshow( window_name, result_norm_scaled );
+  	imshow(window_name, result_norm_scaled);
   	waitKey(0);
 
     return 0;
 }
 
 Mat harris(Mat &src, int block_size, int aperture_size, double k) {
-    /// Generate Ix and Iy
+    // Generate Ix and Iy
     Mat dx, dy;
 
     int ddepth = CV_16S;
 
-    /// Gradient X
+    // Gradient X
     Sobel(src, dx, ddepth, 1, 0, aperture_size);
 
-    /// Gradient Y
+    // Gradient Y
     Sobel(src, dy, ddepth, 0, 1, aperture_size);
     
     Size size = src.size();
     Mat dst(size, CV_32FC1);
     Mat cov(size, CV_32FC3);
 
+    // Concate M matrix
     for (int i = 0; i < size.height; ++i) {
         float *cov_data = cov.ptr<float>(i);
         const float *dx_data = dx.ptr<float>(i);
