@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
     imshow(standard_window_name, dst_norm_scaled);
 
     // My own output
-    Mat result = harris(src, 3, 3, 0.04);
+    Mat result = harris(src_gray, 3, 3, 0.04);
 
     Mat result_norm, result_norm_scaled;
     
@@ -53,10 +53,11 @@ Mat harris(Mat &src, int block_size, int aperture_size, double k) {
     // Generate Ix and Iy
     Mat dx, dy;
 
-    int ddepth = CV_16S;
+    int ddepth = CV_32F;
 
     // Gradient X
     Sobel(src, dx, ddepth, 1, 0, aperture_size);
+    cout << dx << endl;
 
     // Gradient Y
     Sobel(src, dy, ddepth, 0, 1, aperture_size);
@@ -80,6 +81,10 @@ Mat harris(Mat &src, int block_size, int aperture_size, double k) {
             cov_data[j*3+2] = dy * dy;
         }
     }
+    
+    //cout << cov << endl;
+
+    boxFilter(cov, cov, cov.depth(), Size(block_size, block_size), Point(-1, -1), false);
 
     size.width *= size.height;
     size.height = 1;
