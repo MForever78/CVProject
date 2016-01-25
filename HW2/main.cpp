@@ -5,8 +5,9 @@
 using namespace std;
 using namespace cv;
 
-Mat harris(Mat &src, int block_size, int aperture_size, double k);
+Mat harris(Mat &src, int aperture_size, double k);
 Mat heatmap(Mat &src);
+String filename;
 
 int main(int argc, char **argv) {
     Mat src, src_gray;
@@ -18,6 +19,7 @@ int main(int argc, char **argv) {
     String heatmap_window_name = "Heatmap Result";
 
     // Load image
+    filename = String(argv[1]);
     src = imread(argv[1]);
     if (!src.data) {
         printf("Cannot read image\n");
@@ -39,22 +41,21 @@ int main(int argc, char **argv) {
     imshow(standard_window_name, dst_norm_scaled);
 
     // My own output
-    Mat result = harris(src_gray, 3, 3, 0.04);
+    Mat result = harris(src_gray, 3, 0.04);
 
     Mat result_norm, result_norm_scaled;
     
     // normalize to gray image
     normalize(result, result_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
     convertScaleAbs(result_norm, result_norm_scaled);
-    //imwrite("gray_" + argv[1], result_norm_scaled);
 
     // show gray image
   	imshow(window_name, result_norm_scaled);
     
-    //cout << result_norm_scaled << endl;
-
     // convert to heatmap image
-    Mat heatimg = heatmap(result_norm_scaled);
+    Mat result_heat_norm(size, CV_32FC1);
+    normalize(result, result_heat_norm, 0, 1024767, NORM_MINMAX, CV_32FC1, Mat());
+    Mat heatimg = heatmap(result_heat_norm);
     imshow(heatmap_window_name, heatimg);
 
   	waitKey(0);
@@ -62,7 +63,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-Mat harris(Mat &src, int block_size, int aperture_size, double k) {
+Mat harris(Mat &src, int aperture_size, double k) {
     // Generate Ix and Iy
     Mat dx, dy;
 
@@ -77,8 +78,11 @@ Mat harris(Mat &src, int block_size, int aperture_size, double k) {
     Size size = src.size();
     Mat dst(size, CV_32FC1);
     Mat cov(size, CV_32FC3);
+    Mat cov_eigen_min(size, CV_32FC1);
+    Mat cov_eigen_min_norm(size, CV_32FC1);
+    Mat cov_eigen_max(size, CV_32FC1);
+    Mat cov_eigen_max_norm(size, CV_32FC1);
 
-    // Concate M matrix
     for (int i = 0; i < size.height; ++i) {
         float *cov_data = cov.ptr<float>(i);
         const float *dx_data = dx.ptr<float>(i);
@@ -94,21 +98,37 @@ Mat harris(Mat &src, int block_size, int aperture_size, double k) {
         }
     }
     
-    boxFilter(cov, cov, cov.depth(), Size(block_size, block_size), Point(-1, -1), false);
-
-    size.width *= size.height;
-    size.height = 1;
-
     for (int i = 0; i < size.height; ++i) {
         const float *cov_data = cov.ptr<float>(i);
+        float *cov_eigen_min_data = cov_eigen_min.ptr<float>(i);
+        float *cov_eigen_max_data = cov_eigen_max.ptr<float>(i);
+
+        for (int j = 0; j < size.width; ++j) {
+            Mat tensor(2, 2, CV_32FC1);
+            Mat tensor_eigen(1, 2, CV_32FC1);
+            tensor.at<float>(0, 0) = cov_data[j*3];
+            tensor.at<float>(0, 1) = cov_data[j*3+1];
+            tensor.at<float>(1, 0) = cov_data[j*3+1];
+            tensor.at<float>(1, 1) = cov_data[j*3+2];
+            
+            eigen(tensor, tensor_eigen);
+            cov_eigen_max_data[j] = tensor_eigen.at<float>(0);
+            cov_eigen_min_data[j] = tensor_eigen.at<float>(1);
+        }
+    }
+
+    normalize(cov_eigen_min, cov_eigen_min_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
+    imwrite("min_" + filename, cov_eigen_min_norm);
+    normalize(cov_eigen_max, cov_eigen_max_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
+    imwrite("max_" + filename, cov_eigen_max_norm);
+
+    for (int i = 0; i < size.height; ++i) {
+        const float *min_data = cov_eigen_min.ptr<float>(i);
+        const float *max_data = cov_eigen_max.ptr<float>(i);
         float *dst_data = dst.ptr<float>(i);
 
         for (int j = 0; j < size.width; ++j) {
-            float a = cov_data[j*3];
-            float b = cov_data[j*3+1];
-            float c = cov_data[j*3+2];
-
-            dst_data[j] = (float)(a*c - b*b - k*(a + c)*(a + c));
+            dst_data[j] = (float)(min_data[j] * max_data[j] - k * (min_data[j] + max_data[j]) * (min_data[j] + max_data[j]));
         }
     }
 
@@ -136,7 +156,7 @@ Mat heatmap(Mat &src) {
     Mat dst(size, CV_32FC3);
 
     for (int i = 0; i < size.height; ++i) {
-        const unsigned char *data = src.ptr<unsigned char>(i);
+        const float *data = src.ptr<float>(i);
         float *dst_data = dst.ptr<float>(i);
 
         for (int j = 0; j < size.width; ++j) {
@@ -144,7 +164,7 @@ Mat heatmap(Mat &src) {
             float fraction;
             float gray_relative;
 
-            gray_relative = data[j] / 255.0 * NUM_COLORS;
+            gray_relative = data[j] / 1024768.0 * NUM_COLORS;
             idx1 = floor(gray_relative);
             idx2 = idx1 + 1;
             fraction = gray_relative - idx1;
