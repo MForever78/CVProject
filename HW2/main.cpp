@@ -14,9 +14,9 @@ int main(int argc, char **argv) {
     Size size = src.size();
     Mat dst(size, CV_32FC1);
 
-    String standard_window_name = "Harris Corner Demo Standard";
     String window_name = "My Harris Corner";
     String heatmap_window_name = "Heatmap Result";
+    String src_name = "Source Image Corner";
 
     // Load image
     filename = String(argv[1]);
@@ -29,16 +29,9 @@ int main(int argc, char **argv) {
     cvtColor(src, src_gray, CV_BGR2GRAY);
     
     // Create window
-    namedWindow(standard_window_name, CV_WINDOW_AUTOSIZE);
     namedWindow(window_name, CV_WINDOW_AUTOSIZE);
     namedWindow(heatmap_window_name, CV_WINDOW_AUTOSIZE);
-
-    // Standard output
-    cornerHarris( src_gray, dst, 3, 3, 0.04, BORDER_DEFAULT );
-    Mat dst_norm, dst_norm_scaled;
-    normalize(dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
-    convertScaleAbs( dst_norm, dst_norm_scaled );
-    imshow(standard_window_name, dst_norm_scaled);
+    namedWindow(src_name, CV_WINDOW_AUTOSIZE);
 
     // My own output
     Mat result = harris(src_gray, 3, 0.04);
@@ -48,9 +41,23 @@ int main(int argc, char **argv) {
     // normalize to gray image
     normalize(result, result_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
     convertScaleAbs(result_norm, result_norm_scaled);
+  	imshow(window_name, result_norm_scaled);
+    
+    int thresh = 50;
+
+    Mat src_clone = src.clone();
 
     // show gray image
-  	imshow(window_name, result_norm_scaled);
+    for (int i = 0; i < result_norm.rows; ++i) {
+        for (int j = 0; j < result_norm.cols; ++j) {
+            if ((int) result_norm.at<float>(i, j) > thresh) {
+                circle(src_clone, Point(j, i), 5, Scalar(0), 2, 8, 0);
+            }
+        }
+    }
+    imshow(src_name, src_clone);
+
+    imwrite("corner_" + filename, src_clone);
     
     // convert to heatmap image
     Mat result_heat_norm(size, CV_32FC1);
@@ -97,6 +104,8 @@ Mat harris(Mat &src, int aperture_size, double k) {
             cov_data[j*3+2] = dy * dy;
         }
     }
+
+    boxFilter(cov, cov, cov.depth(), Size(3, 3), Point(-1, -1), false);
     
     for (int i = 0; i < size.height; ++i) {
         const float *cov_data = cov.ptr<float>(i);
