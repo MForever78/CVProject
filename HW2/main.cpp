@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     // normalize to gray image
     normalize(result, result_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
     convertScaleAbs(result_norm, result_norm_scaled);
-  	imshow(window_name, result_norm_scaled);
+    imshow(window_name, result_norm_scaled);
     
     int thresh = 50;
 
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
     Mat heatimg = heatmap(result_heat_norm);
     imshow(heatmap_window_name, heatimg);
 
-  	waitKey(0);
+    waitKey(0);
 
     return 0;
 }
