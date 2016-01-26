@@ -13,6 +13,8 @@ int main(int argc, char **argv) {
     Mat src, src_gray;
     Size size = src.size();
     Mat dst(size, CV_32FC1);
+    float harris_k;
+    int aperture_size;
 
     String window_name = "My Harris Corner";
     String heatmap_window_name = "Heatmap Result";
@@ -25,6 +27,18 @@ int main(int argc, char **argv) {
         printf("Cannot read image\n");
         exit(-1);
     }
+    
+    if (argc > 2) {
+        harris_k = atof(argv[2]);
+    } else {
+        harris_k = 0.04;
+    }
+
+    if (argc > 3) {
+        aperture_size = atoi(argv[3]);
+    } else {
+        aperture_size = 3;
+    }
 
     cvtColor(src, src_gray, CV_BGR2GRAY);
     
@@ -34,7 +48,7 @@ int main(int argc, char **argv) {
     namedWindow(src_name, CV_WINDOW_AUTOSIZE);
 
     // My own output
-    Mat result = harris(src_gray, 3, 0.04);
+    Mat result = harris(src_gray, aperture_size, harris_k);
 
     Mat result_norm, result_norm_scaled;
     
@@ -43,7 +57,7 @@ int main(int argc, char **argv) {
     convertScaleAbs(result_norm, result_norm_scaled);
     imshow(window_name, result_norm_scaled);
     
-    int thresh = 50;
+    int thresh = 100;
 
     Mat src_clone = src.clone();
 
